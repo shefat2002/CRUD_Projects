@@ -62,4 +62,18 @@ public class UserController : Controller
         return View(user);
     }
 
+    public IActionResult Delete(int id)
+    {
+        var user = _dbContext.Users.Find(id);
+        if (user == null)
+        {
+            return NotFound();
+        }
+        _dbContext.Users.Remove(user);
+        if (_dbContext.SaveChanges() > 0)
+        {
+            return RedirectToAction("Index");
+        }
+        return View(user);
+
 }

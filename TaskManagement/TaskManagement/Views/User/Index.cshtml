@@ -3,25 +3,121 @@
     ViewData["Title"] = "Users";
 }
 
-<a asp-action="Create" asp-controller="User"> Create User </a>
+<!-- Button to trigger Create User modal -->
+<button class="btn btn-primary mb-2" id="btnCreateUser">
+    <i class="fa fa-plus"></i> Create User
+</button>
 
-<table>
-    <tr>
-        <td>User ID</td>
-        <td>Name</td>
-        <td>Phone</td>
-        <td>Actions</td>
-    </tr>
-    @foreach (var item in Model)
-    {
+<table class="table table-bordered">
+    <thead>
         <tr>
-            <td>@item.Id</td>
-            <td>@item.Name</td>
-            <td>@item.PhoneNo</td>
-            <td>
-                <a asp-action="Edit" asp-controller="User" asp-route-id="@item.Id">Edit</a> |
-                <a asp-action="Delete" asp-controller="User" asp-route-id="@item.Id">Delete</a>
-            </td>
+            <th>User ID</th>
+            <th>Name</th>
+            <th>Phone</th>
+            <th>Actions</th>
         </tr>
-    }
+    </thead>
+    <tbody id="userTableBody">
+        @foreach (var item in Model)
+        {
+            <tr data-id="@item.Id">
+                <td>@item.Id</td>
+                <td>@item.Name</td>
+                <td>@item.PhoneNo</td>
+                <td>
+                    <button class="btn btn-sm btn-warning btn-edit" data-id="@item.Id">
+                        <i class="fa fa-edit"></i> Edit
+                    </button>
+                    <button class="btn btn-sm btn-danger btn-delete" data-id="@item.Id">
+                        <i class="fa fa-trash"></i> Delete
+                    </button>
+                </td>
+            </tr>
+        }
+    </tbody>
 </table>
+
+<!-- Bootstrap Modal -->
+<div class="modal fade" id="userModal" tabindex="-1" aria-labelledby="userModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="userModalLabel"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="userModalBody">
+                <!-- Form content loaded here via AJAX -->
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script>
+        // Open Create User modal
+        $('#btnCreateUser').on('click', function () {
+            $.get('@Url.Action("Create", "User")', function (data) {
+                $('#userModalLabel').text('Create User');
+                $('#userModalBody').html(data);
+                var modal = new bootstrap.Modal(document.getElementById('userModal'));
+                modal.show();
+            });
+        });
+
+        // Open Edit User modal
+        $(document).on('click', '.btn-edit', function () {
+            var id = $(this).data('id');
+            $.get('@Url.Action("Edit", "User")/' + id, function (data) {
+                $('#userModalLabel').text('Edit User');
+                $('#userModalBody').html(data);
+                var modal = new bootstrap.Modal(document.getElementById('userModal'));
+                modal.show();
+            });
+        });
+
+        // Open Delete User modal
+        $(document).on('click', '.btn-delete', function () {
+            var id = $(this).data('id');
+            $.get('@Url.Action("Delete", "User")/' + id, function (data) {
+                $('#userModalLabel').text('Delete User');
+                $('#userModalBody').html(data);
+                var modal = new bootstrap.Modal(document.getElementById('userModal'));
+                modal.show();
+            });
+        });
+
+        // Handle form submit via AJAX for Create/Edit/Delete
+        $(document).on('submit', 'form.ajax-form', function (e) {
+            e.preventDefault();
+            var form = $(this);
+            var url = form.attr('action');
+            var method = form.attr('method');
+            var data = form.serialize();
+
+            $.ajax({
+                url: url,
+                type: method,
+                data: data,
+                success: function (result) {
+                    if (result.success) {
+                        $('#userModal').modal('hide');
+                        refreshUserTable();
+                    } else {
+                        // Replace modal body with validation errors
+                        $('#userModalBody').html(result);
+                    }
+                }
+            });
+        });
+
+        // Refresh user table after CRUD
+        function refreshUserTable() {
+            $.get('@Url.Action("Index", "User")', function (data) {
+                var html = $(data).find('#userTableBody').html();
+                $('#userTableBody').html(html);
+            });
+        }
+    </script>
+}
