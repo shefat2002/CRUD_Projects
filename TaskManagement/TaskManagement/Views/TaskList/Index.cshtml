@@ -1,0 +1,27 @@
+﻿@model IEnumerable<TaskManagement.Models.TaskList>
+
+@{
+    ViewData["Title"] = "Task List";
+}
+<a asp-action="Create" asp-controller="TaskList"> Create Task </a>
+
+<table>
+    <tr>
+        <td>Task ID</td>
+        <td>Task Name</td>
+        <td>Description</td>
+        <td>Actions</td>
+    </tr>
+    @foreach (var item in Model)
+    {
+        <tr>
+            <td>@item.Id</td>
+            <td>@item.Title</td>
+            <td>@item.Description</td>
+            <td>
+                <a asp-action="Edit" asp-controller="TaskList" asp-route-id="@item.Id">Edit</a> |
+                <a asp-action="Delete" asp-controller="TaskList" asp-route-id="@item.Id">Delete</a>
+            </td>
+        </tr>
+}
+</table>
