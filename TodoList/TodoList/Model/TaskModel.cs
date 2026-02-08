@@ -6,7 +6,7 @@ public class TaskModel
 {
     public int Id { get; set; }
 
-    [StringLength(15, ErrorMessage = "Error! Name must be within 15 characters!")]
+    [StringLength(15, ErrorMessage = "Error! Title must be within 15 characters!")]
     public string TaskTitle { get; set; } = null!;
     
     [StringLength(45, ErrorMessage = "Error! Description must be within 45 characters!")]
