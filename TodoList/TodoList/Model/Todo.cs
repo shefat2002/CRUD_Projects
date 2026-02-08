@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace TodoList.Model;
 
-public class TaskModel
+public class Todo
 {
     public int Id { get; set; }
 
@@ -14,5 +14,12 @@ public class TaskModel
     public bool IsCompleted { get; set; } = false;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime DueDate { get; set; } = DateTime.UtcNow;
+    public Priority Priority { get; set; }
 
+}
+
+public enum Priority
+{
+    High,
+    Low
 }
