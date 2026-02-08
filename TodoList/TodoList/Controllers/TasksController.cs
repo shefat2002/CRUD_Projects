@@ -26,4 +26,9 @@ public class TasksController(TodoDbContext context) : Controller
         await _context.SaveChangesAsync();
         return Ok();
     }
+    // GET
+    // public async Task<ActionResult<IEnumerable<Task>>> GetTaskList()
+    // {
+    //     
+    // }
 }
