@@ -1,0 +1,6 @@
+@SortFilterPagination_HostAddress = http://localhost:5068
+
+GET {{SortFilterPagination_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
