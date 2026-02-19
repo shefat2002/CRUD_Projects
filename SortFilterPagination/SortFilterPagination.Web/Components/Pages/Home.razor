@@ -1,59 +1,236 @@
 ﻿@page "/"
 @inject IHttpClientFactory HttpClientFactory
+@rendermode InteractiveServer
 
-<PageTitle>People</PageTitle>
+<PageTitle>People Directory</PageTitle>
 
-<h1>People</h1>
+<div class="container mt-4">
+    <h1>People Directory</h1>
 
-@if (people == null)
-{
-    <p>Loading...</p>
-}
-else
-{
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Id</th>
-                <th>First Name</th>
-                <th>Last Name</th>
-                <th>Email</th>
-                <th>Age</th>
-                <th>City</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var person in people)
-            {
+    <div class="card p-3 mb-3 bg-light">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Search</label>
+                <input type="text" class="form-control" placeholder="Name or Email..." 
+                       @bind="searchTerm" @bind:event="oninput" @onkeyup="HandleSearch" />
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">Group by City</label>
+                <select class="form-select" @bind="selectedCity" @bind:after="HandleSearch">
+                    <option value="">-- All Cities --</option>
+                    @if (cities != null)
+                    {
+                        foreach (var city in cities)
+                        {
+                            <option value="@city">@city</option>
+                        }
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">Page Size</label>
+                <select class="form-select" @bind="pageSize" @bind:after="HandleSearch">
+                    <option value="5">5</option>
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                </select>
+            </div>
+            
+            <div class="col-md-3 d-flex align-items-end">
+                <button class="btn btn-secondary w-100" @onclick="Reset">Reset Filters</button>
+            </div>
+        </div>
+    </div>
+
+    @if (result == null)
+    {
+        <div class="d-flex justify-content-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <table class="table table-striped table-hover shadow-sm">
+            <thead class="table-dark">
                 <tr>
-                    <td>@person.Id</td>
-                    <td>@person.FirstName</td>
-                    <td>@person.LastName</td>
-                    <td>@person.Email</td>
-                    <td>@person.Age</td>
-                    <td>@person.City</td>
+                    <th @onclick='() => Sort("Id")' role="button">
+                        ID @GetSortIcon("Id")
+                    </th>
+                    <th @onclick='() => Sort("FirstName")' role="button">
+                        First Name @GetSortIcon("FirstName")
+                    </th>
+                    <th @onclick='() => Sort("LastName")' role="button">
+                        Last Name @GetSortIcon("LastName")
+                    </th>
+                    <th @onclick='() => Sort("Email")' role="button">
+                        Email @GetSortIcon("Email")
+                    </th>
+                    <th @onclick='() => Sort("Age")' role="button">
+                        Age @GetSortIcon("Age")
+                    </th>
+                    <th @onclick='() => Sort("City")' role="button">
+                        City @GetSortIcon("City")
+                    </th>
                 </tr>
-            }
-        </tbody>
-    </table>
-}
+            </thead>
+            <tbody>
+                @if (result.Items.Count == 0)
+                {
+                    <tr>
+                        <td colspan="6" class="text-center">No records found.</td>
+                    </tr>
+                }
+                @foreach (var person in result.Items)
+                {
+                    <tr>
+                        <td>@person.Id</td>
+                        <td>@person.FirstName</td>
+                        <td>@person.LastName</td>
+                        <td>@person.Email</td>
+                        <td>@person.Age</td>
+                        <td>@person.City</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <div class="d-flex justify-content-between align-items-center">
+            <span class="text-muted">
+                Showing @result.Items.Count of @result.TotalCount records | Page @pageNumber of @result.TotalPages
+            </span>
+
+            <nav>
+                <ul class="pagination mb-0">
+                    <li class="page-item @(pageNumber == 1 ? "disabled" : "")">
+                        <button class="page-link" @onclick="PrevPage">Previous</button>
+                    </li>
+                    <li class="page-item @(pageNumber >= result.TotalPages ? "disabled" : "")">
+                        <button class="page-link" @onclick="NextPage">Next</button>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    }
+</div>
 
 @code {
-    private List<Person>? people;
+    private HttpClient http = default!;
+    
+    private PagedResult<Person>? result;
+    private List<string>? cities;
+
+    private string searchTerm = "";
+    private string selectedCity = "";
+    private int pageNumber = 1;
+    private int pageSize = 10;
+    private string sortColumn = "Id";
+    private string sortOrder = "asc";
 
     protected override async Task OnInitializedAsync()
     {
-        var http = HttpClientFactory.CreateClient("Api");
-        people = await http.GetFromJsonAsync<List<Person>>("api/people");
+        http = HttpClientFactory.CreateClient("Api");
+        
+        cities = await http.GetFromJsonAsync<List<string>>("api/people/cities");
+        
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        var queryParams = new List<string>
+        {
+            $"pageNumber={pageNumber}",
+            $"pageSize={pageSize}",
+            $"sortColumn={sortColumn}",
+            $"sortOrder={sortOrder}"
+        };
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+            queryParams.Add($"searchTerm={searchTerm}");
+
+        if (!string.IsNullOrWhiteSpace(selectedCity))
+            queryParams.Add($"city={selectedCity}");
+
+        var url = $"api/people?{string.Join("&", queryParams)}";
+
+        result = await http.GetFromJsonAsync<PagedResult<Person>>(url);
+    }
+
+    private async Task HandleSearch()
+    {
+        pageNumber = 1;
+        await LoadData();
+    }
+    
+    private async Task Reset()
+    {
+        searchTerm = "";
+        selectedCity = "";
+        pageNumber = 1;
+        sortColumn = "Id";
+        sortOrder = "asc";
+        await LoadData();
+    }
+
+    private async Task Sort(string column)
+    {
+        if (sortColumn == column)
+        {
+            sortOrder = sortOrder == "asc" ? "desc" : "asc";
+        }
+        else
+        {
+            sortColumn = column;
+            sortOrder = "asc";
+        }
+        await LoadData();
+    }
+
+    private async Task NextPage()
+    {
+        if (result != null && pageNumber < result.TotalPages)
+        {
+            pageNumber++;
+            await LoadData();
+        }
+    }
+
+    private async Task PrevPage()
+    {
+        if (pageNumber > 1)
+        {
+            pageNumber--;
+            await LoadData();
+        }
+    }
+
+    private string GetSortIcon(string column)
+    {
+        if (sortColumn != column) return "↕";
+        return sortOrder == "asc" ? "↑" : "↓";
     }
 
     public class Person
     {
         public int Id { get; set; }
-        public string FirstName { get; set; } = string.Empty;
-        public string LastName { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+        public string Email { get; set; } = "";
         public int Age { get; set; }
-        public string City { get; set; } = string.Empty;
+        public string City { get; set; } = "";
+    }
+
+    public class PagedResult<T>
+    {
+        public List<T> Items { get; set; } = new();
+        public int TotalCount { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public int TotalPages { get; set; }
     }
 }
